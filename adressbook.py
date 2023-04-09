@@ -2,71 +2,78 @@ from collections import UserDict
 
 
 class Field:
-    def __init__(self):
-        self.__value = None
 
-    def __str__(self):
-        return str(self.__value)
+    def __init__(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Value must be a string")
+        self.value = value
 
-    def __repr__(self):
-        return str(self)
-
-    def __eq__(self, other):
-        return self.__value == other.__value
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 class Name(Field):
-    def __init__(self, name):
-        super().__init__()
-        self.__value = name.strip()
+    pass
 
 
-class Phone(Field):
-    def __init__(self, phone):
-        super().__init__()
-        self.__value = self.format_phone(phone)
-
-    def format_phone(self, phone):
-        return ''.join(filter(str.isdigit, phone))
-
-    def __repr__(self):
-        return self.__str__()
+class PhoneNumber(Field):
+    def __init__(self, number):
+        self.number = number
 
     def __str__(self):
-        phone = self.__value
-        return f'+{phone[0]} ({phone[1:4]}) {phone[4:7]}-{phone[7:9]}-{phone[9:]}'
+        return str(self.number)
+
+    def __repr__(self):
+        return self.number
 
 
 class Record:
-    def __init__(self, name):
-        self.name = Name(name)
+    def __init__(self, name: Name):
+        self.name = name
         self.phones = []
 
-    def add_phone(self, phone):
-        self.phones.append(Phone(phone))
+    def add_phone(self, *phones):
+        self.phones.extend([str(phone) for phone in phones])
 
-    def edit_phone(self, phone_index, new_phone):
-        self.phones[phone_index] = Phone(new_phone)
+    def remove_phone(self, phone):
+        if phone in self.phones:
+            self.phones.remove(phone)
+        else:
+            raise ValueError(
+                "The provided phone number does not exist for this record.")
 
-    def delete_phone(self, phone_index):
-        del self.phones[phone_index]
+    def edit_phone(self, old_phone, new_phone):
+        if old_phone in self.phones:
+            index = self.phones.index(old_phone)
+            self.phones[index] = new_phone
 
     def __str__(self):
         return f'{self.name}: {", ".join(str(phone) for phone in self.phones)}'
 
 
 class AdressBook(UserDict):
-    def add_record(self, record):
-        self.data[record.name.__str__()] = record
+    def add_record(self, record: Record):
+        self.data[record.name.value] = record
 
-    def delete(self, name):
-        del self.data[name]
-
-    def search(self, query):
+    def search(self, **kwargs):
         result = []
         for record in self.data.values():
-            if record.name.__str__() == query:
-                result.append(record)
-            elif query in [phone.__str__() for phone in record.phones]:
+            found = True
+            for key, value in kwargs.items():
+                if key == 'name':
+                    if record.name.value.lower() != value.lower():
+                        found = False
+                        break
+                elif key == 'phone':
+                    phones = [phone.value for phone in record.phones]
+                    if value not in phones:
+                        found = False
+                        break
+            if found:
                 result.append(record)
         return result
+
+
+if __name__ == '__main__':
+
+    adressbook = AdressBook()

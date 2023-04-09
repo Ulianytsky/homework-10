@@ -1,4 +1,7 @@
-from adressbook import AdressBook, Record, Name, Phone
+from adressbook import Name, Record, AdressBook, PhoneNumber
+
+
+address_book = AdressBook()
 
 
 def input_error(func):
@@ -11,45 +14,76 @@ def input_error(func):
 
 
 def help(*args):
-    return '''How can I help you? For adding type add, name, " " and phone number'''
+    return '''How can I help you? For adding type add, name, and phone number.
+To change phone number type change, name, and old phone number " " new phone number.
+To show all contacts type show all.
+To search type search, name or phone number.
+To exit type exit.
+'''
 
 
 @input_error
-def add(abook, *args):
+def add(*args):
     list_of_param = args[0].split()
     name = Name(list_of_param[0])
-    record = Record(name)
-    for phone in list_of_param[1:]:
-        record.add_phone(Phone(phone))
-    abook.add_record(record)
-    return f'{name}, phones {record.phones}'
+    phone_numbers = [PhoneNumber(number) for number in list_of_param[1:]]
+    if name.value in address_book:
+        record = address_book[name.value]
+        record.add_phone(*phone_numbers)
+    else:
+        record = Record(name)
+        record.add_phone(*phone_numbers)
+        address_book.add_record(record)
+    return f'{name}, phone number {", ".join(str(phone) for phone in phone_numbers)} added to the address book.'
 
 
 @input_error
-def change(abook, *args):
+def change(*args):
     list_of_param = args[0].split()
     name = Name(list_of_param[0])
-    record = abook.data.get(name)
-    if record is None:
+    old_phone = PhoneNumber(list_of_param[1])
+    new_phone = PhoneNumber(list_of_param[2])
+    record = address_book.data.get(name.value)
+    if record:
+        try:
+            record.edit_phone(old_phone, new_phone)
+            return f'Phone number {old_phone} for {name} updated to {new_phone}.'
+        except ValueError as e:
+            return str(e)
+    else:
+        return f'There is no record with name {name}.'
+
+
+@input_error
+def phone(*args):
+    name = Name(args[0])
+    if name.value not in address_book:
         return f'Contact {name} does not exist in the list.'
-    for i, phone in enumerate(list_of_param[1:]):
-        record.edit_phone(i, Phone(phone))
-    return f'Changed phone numbers for {name} to {record.phones}'
+    record = address_book[name.value]
+    return f'Phone number(s) for {name}: {record.phones}'
 
 
-def phone(abook, name):
-    record = abook.data.get(Name(name))
-    if record is None:
-        return f'Contact {name} does not exist in the list.'
-    return f'Phone numbers for {name}: {record.phones}'
+def search(*args):
+    search_str = args[0].lower()
+    result = []
+    for name, record in address_book.items():
+        if search_str in name or search_str in record.phones:
+            result.append(record)
+    output = ''
+    if not result:
+        return 'No records found.'
+    for record in result:
+        output += str(record) + '\n'
+    return output
 
 
-def show_all(abook):
-    if not abook.data:
+def show_all(*args):
+    if not address_book:
         return 'There are no contacts in the list.'
     output = ''
-    for name, record in abook.data.items():
-        output += f'{name}: {record.phones}\n'
+    for name, record in address_book.items():
+        phones_str = ', '.join(str(phone) for phone in record.phones)
+        output += f'{name}: {phones_str}\n'
     return output
 
 
@@ -66,17 +100,16 @@ COMMANDS = {
     add: 'add',
     change: 'change',
     phone: 'phone',
+    search: 'search',
     show_all: 'show all',
     exit: 'exit'
 }
 
 
-def command_handler(abook, text):
+def command_handler(text):
     for command, kword in COMMANDS.items():
         if text.startswith(kword):
-            if kword == 'phone':
-                return lambda: command(abook, text.replace(kword, '').strip())
-            return lambda: command(abook, text.replace(kword, '').strip())
+            return command, text.replace(kword, '').strip()
     return no_command, None
 
 
