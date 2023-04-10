@@ -28,9 +28,9 @@ class PhoneNumber(Field):
 
 
 class Record:
-    def __init__(self, name: Name):
+    def __init__(self, name: Name, phone: PhoneNumber = None):
         self.name = name
-        self.phones = []
+        self.phones = [phone] if phone else []
 
     def add_phone(self, *phones):
         self.phones.extend([str(phone) for phone in phones])
